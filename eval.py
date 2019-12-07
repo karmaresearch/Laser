@@ -7,6 +7,7 @@ import time
 
 from stream.teststream import TestStream
 from stream.evalstream import EvalStream
+from stream.evastreamoldvsnewbox import EvalStreamOldvsNewBox
 from stream.rdfstream1 import RDFStream1
 from stream.rdfstream2 import RDFStream2
 from evalunit.program import Program
@@ -51,7 +52,7 @@ def evalDiamond(winSize, nTriples):
 	print("Avg = %f seconds for %d triples (%f seconds per triple)!" % (float(sum(tList)) / len(tList), nTriples, (float(sum(tList) / len(tList) / nTriples))))
 	print("************************************************************")
 #------------------------------------------
-def evalBox(winSize, nTriples):
+def evalBox1(winSize, nTriples):
 	print("******************* Box Evaluation winSize = %d, Triples = %d *********************" % (winSize, nTriples))
 	rules = [
 		"z(X) :- time_win(" + str(winSize) + ", 0, 1, box(p(X)))",
@@ -69,6 +70,34 @@ def evalBox(winSize, nTriples):
 		sys.stdout.flush()
 		tList.append(end - start)
 	print("Avg = %f seconds for %d triples (%f seconds per triple)!" % (float(sum(tList)) / len(tList), nTriples, (float(sum(tList) / len(tList) / nTriples))))
+	print("********************************************************")
+#------------------------------------------
+def evalBox2(winSize, nTriples, nTimePoints):
+	print("******************* Box Evaluation winSize = %d, Triples = %d *********************" % (winSize, nTriples))
+	rules = [
+		"h(X,Y) :- time_win(" + str(winSize) + ", 0, 1, box(p(X,Y)))",
+	]
+
+	s = EvalStreamOldvsNewBox("p", nTriples)
+	prog = Program(rules, s)
+
+	#tList = list()
+	nConclusions = 0
+	evaluationTime = 0
+	for t in range(0, nTimePoints):
+		start = time.clock()
+		res, tuples = prog.evaluate(t)
+		end = time.clock()
+
+		assert(res == True, "Evaluation failed!")
+		nConclusions += len(tuples[t])
+		#sys.stdout.write("Time = %d\r" % (t))
+		#sys.stdout.flush()
+		#tList.append(end - start)
+		evaluationTime += (end - start)
+	print("Conclusions = %d\n" % (nConclusions))
+	# print("Avg = %f seconds for %d triples (%f seconds per triple)!" % (float(sum(tList)) / len(tList), nTriples, (float(sum(tList) / len(tList) / nTriples))))
+	print("Avg execution time = %f\n" % (float(evaluationTime * 1000000000)/float(nTimePoints * nTriples)))
 	print("********************************************************")
 #------------------------------------------
 def evalSingleJoin(winSize, nTriples):
@@ -180,10 +209,15 @@ if __name__ == "__main__":
 		winSize = int(sys.argv[2])
 		nTriples = int(sys.argv[3])
 		evalDiamond(winSize, nTriples)
-	elif sys.argv[1] == "evalBox":
+	elif sys.argv[1] == "evalBox1":
 		winSize = int(sys.argv[2])
 		nTriples = int(sys.argv[3])
-		evalBox(winSize, nTriples)
+		evalBox1(winSize, nTriples)
+	elif sys.argv[1] == "evalBox2":
+		winSize = int(sys.argv[2])
+		nTriples = int(sys.argv[3])
+		nTimePoints = int(sys.argv[4])
+		evalBox2(winSize, nTriples, nTimePoints)
 	else:
 		print("Unknown experiment %s" % (sys.argv[1]))
 		exit(1)
